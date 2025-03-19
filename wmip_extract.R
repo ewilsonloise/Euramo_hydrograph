@@ -16,15 +16,15 @@ WMIP_Extract <- function (WMIPID, START, param = "level", datasource = "AT",
   param <- dplyr::case_when(
     param == "level" ~ "varfrom=100.00&varto=100.00",
     param == "discharge" ~ "varfrom=100.00&varto=140.00",
-    # param == "preservedQ" ~ "varfrom=140.00&varto=140.00",
+    #param == "preservedQ" ~ "varfrom=140.00&varto=140.00",
     param == "rainfall" ~ "varfrom=10.00&varto=10.00",
-    # param == "temperature" ~ "varfrom=2080.00&varto=2080.00",
-    # param == "conductivity" ~ "varfrom=2010.00&varto=2010.00",
-    # param == "pH" ~ "varfrom=2100.00&varto=2100.00",
-    # param == "turbidity" ~ "varfrom=2030.00&varto=2030.00"
+    #param == "temperature" ~ "varfrom=2080.00&varto=2080.00",
+    #param == "conductivity" ~ "varfrom=2010.00&varto=2010.00",
+    #param == "pH" ~ "varfrom=2100.00&varto=2100.00",
+    #param == "turbidity" ~ "varfrom=2030.00&varto=2030.00"
   )
   
-  WMIP_URL <- paste("https://water-monitoring.information.qld.gov.au/cgi/webservice.pl?function=get_ts_traces&site_list=",
+  WMIP_URL <- paste("https://water-monitoring.information.qld.gov.au/cgi/webservice.pl?",
                     WMIPID, "&datasource=", datasource, "&",
                     param, "&start_time=", START, "&end_time=",
                     END, "&data_type=",type,"&interval=",interval,
@@ -48,3 +48,27 @@ WMIP_Extract <- function (WMIPID, START, param = "level", datasource = "AT",
   
   return(WMIPData)
 }
+
+
+
+EuramoRainfall <- WMIP_Extract("113006A", START = format(as.POSIXct("2009-01-01 00:00"), "%Y%m%d"),
+                        param = "Rainfall", type = "point", datasource = "AT")
+
+# EuramoHt <- WMIP_Extract("113006A", START = format(as.POSIXct("2009-01-01 00:00"), "%Y%m%d"),
+#                          param = "level", type = "point")
+# 
+# # hourly totals until the hour
+# EuramoRain <- WMIP_Extract("113006A", START = format(as.POSIXct("2009-01-01 00:00"), "%Y%m%d"),
+#                            param = "rainfall", type = "tot", interval = "hour", report = "end")
+# #EuramoRain <- EuramoRain %>% dplyr::filter(quality < 255)
+# 
+# # hourly totals until the hour
+# GorgeRain <- WMIP_Extract("113015A", START = format(as.POSIXct("2009-01-01 00:00"), "%Y%m%d"),
+#                           param = "rainfall", type = "tot", interval = "hour", report = "end")
+# 
+# 
+
+
+
+
+
