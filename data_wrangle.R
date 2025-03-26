@@ -65,3 +65,7 @@ colnames(dat_joined)
 
 # skimr::skim(dat_joined)
 # summarytools::dfSummary(dat_joined)
+
+
+write_csv(dat_joined, "Data/dat.csv")
+
