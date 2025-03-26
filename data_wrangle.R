@@ -31,9 +31,6 @@ dat <- df1 %>%
   pivot_wider(names_from = "varname", values_from = "value") %>% 
   janitor::clean_names()
 
-skimr::skim(df2)
-summarytools::dfSummary(df2)
-
 
 #write_csv(dat, "Data/dat.csv")
 
@@ -65,3 +62,6 @@ df2 <- df2 %>% select(all_of(column_order))
 
 dat_joined <- rbind(dat, df2)
 colnames(dat_joined)
+
+# skimr::skim(dat_joined)
+# summarytools::dfSummary(dat_joined)
