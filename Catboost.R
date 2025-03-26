@@ -24,3 +24,12 @@
 # While CatBoost performs well with default settings, tuning key parameters improves 
 # accuracy. Training can be computationally expensive, but multiple random permutations 
 # help enhance robustness.
+
+
+install.packages('devtools')
+devtools::install_github('catboost/catboost', subdir = 'catboost/R-package')
+
+install.packages('devtools')
+
+
+
