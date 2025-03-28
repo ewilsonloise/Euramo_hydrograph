@@ -23,18 +23,18 @@ dat <- dat %>% select(-time)
 
 ## Prepare data for training
 # Split data to train, validation and test by date.
+# 
+# last_train_date <- dat$year = 2024, 8, 1)
+# last_val_date = pd.Timestamp(2020, 3, 24)
+# last_test_date = pd.Timestamp(2020, 4, 23)
+# 
+# train_df = main_df[main_df['Date'] <= last_train_date].copy()
+# val_df = main_df[(main_df['Date'] > last_train_date) & (main_df['Date'] <= last_eval_date)].copy()
+# test_df = main_df[main_df['Date'] > last_eval_date].copy()
 
-last_train_date = pd.Timestamp(2020, 3, 11)
-last_eval_date = pd.Timestamp(2020, 3, 24)
-last_test_date = pd.Timestamp(2020, 4, 23)
-
-train_df = main_df[main_df['Date'] <= last_train_date].copy()
-eval_df = main_df[(main_df['Date'] > last_train_date) & (main_df['Date'] <= last_eval_date)].copy()
-test_df = main_df[main_df['Date'] > last_eval_date].copy()
 
 
-
-## Training model
+## Train a model
 training_pool <- catboost.load_pool(
   data = dat[, c("site", "rainfall_mm", "discharge_cumecs", "level_metres", 
                  "year", "month", "day", "hour")], 
