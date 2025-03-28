@@ -40,10 +40,10 @@ dat1 <- df1 %>%
   pivot_wider(names_from = "varname", values_from = "value") %>%
   janitor::clean_names()
 
+write_csv(dat1, "Data/dat.csv")
 
 
 #old code below 
-
 # #Data Wrangle 
 # 
 # #Libraries
@@ -156,5 +156,4 @@ dat1 <- df1 %>%
 # # summarytools::dfSummary(dat_joined)
 # 
 # 
-# write_csv(dat_joined, "Data/dat_joined.csv")
 

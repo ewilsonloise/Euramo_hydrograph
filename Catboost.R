@@ -7,6 +7,7 @@ library(remotes)
 library(renv)
 # devtools::install_github('catboost/catboost', subdir = 'catboost/R-package')
 library(catboost)
+library(tidyverse)
 
 ## 2. Prep data
 dat <- read_csv("Data/dat.csv")
