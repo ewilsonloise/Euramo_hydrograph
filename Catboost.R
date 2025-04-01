@@ -19,8 +19,7 @@ dat$time <- as.POSIXct(dat$time, format = "%Y-%m-%d %H")
 dat$year <- as.numeric(format(dat$time, "%Y"))
 dat$month <- as.numeric(format(dat$time, "%m"))
 dat$day <- as.numeric(format(dat$time, "%d"))
-dat$hour <- as.numeric(format(dat$time, "%H"))  # note that this is NA if there is no hour value (i.e. for BOM sites )
-dat <- dat %>% select(-time)
+dat$hour <- as.numeric(format(dat$time, "%H"))
 
 ## Prepare data for training
 # Split data to train, validation and test by date.

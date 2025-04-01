@@ -40,10 +40,15 @@ dat1 <- df1 %>%
   pivot_wider(names_from = "varname", values_from = "value") %>%
   janitor::clean_names()
 
-dat1$level_derivative <- NA
+dat1 <- dat1 %>% 
+  arrange(site, time) #arraginig by site and time to ensure that the derivative calculation is correct
+
+dat1$level_derivative <- NA #assigning a blank column for the derivative calc
 
 dat1 <- dat1 %>% 
-  mutate(level_derivative = level_metres - lag(level_metres, n = 1))
+  mutate(level_derivative = level_metres - lag(level_metres))
 
 write_csv(dat1, "Data/dat.csv")
+
+
 
