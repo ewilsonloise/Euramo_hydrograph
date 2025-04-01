@@ -35,6 +35,40 @@ dat <- dat %>% select(-time)
 
 
 
+#Split data into test, train and validate 
+#Option 1  This equation takes the square root of the number of unique observations 
+
+# Compute the number of unique rows in the dataset
+Nu <- nrow(distinct(dat))
+
+# Compute p as the square root of Nu
+p <- sqrt(Nu)
+
+# Print the result
+print(p)
+
+##option 2 - This equation takes the square root of the number of represents the number of parameters in a linear regression model
+
+# Fit a linear regression model (example using dataset 'dat')
+model <- lm(y ~ ., data = dat)  # Assuming 'y' is the response variable
+
+# Get the number of parameters in the model (including intercept)
+p1 <- length(coef(model))
+
+# Compute the square root of p1
+sqrt_p1 <- sqrt(p1)
+
+# Print the ratio
+ratio <- paste(sqrt_p1, ": 1")
+print(ratio)
+
+
+
+  
+
+
+
+
 ## Train a model
 training_pool <- catboost.load_pool(
   data = dat[, c("site", "rainfall_mm", "discharge_cumecs", "level_metres", 
