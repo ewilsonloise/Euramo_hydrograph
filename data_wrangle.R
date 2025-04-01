@@ -46,3 +46,4 @@ dat1 <- dat1 %>%
   mutate(level_derivative = level_metres - lag(level_metres, n = 1))
 
 write_csv(dat1, "Data/dat.csv")
+
