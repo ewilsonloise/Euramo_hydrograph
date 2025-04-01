@@ -8,6 +8,7 @@ library(renv)
 # devtools::install_github('catboost/catboost', subdir = 'catboost/R-package')
 library(catboost)
 library(tidyverse)
+library(rsample) 
 
 ## 2. Prep data
 dat <- read_csv("Data/dat.csv")
@@ -21,45 +22,28 @@ dat$month <- as.numeric(format(dat$time, "%m"))
 dat$day <- as.numeric(format(dat$time, "%d"))
 dat$hour <- as.numeric(format(dat$time, "%H"))
 
-## Prepare data for training
-# Split data to train, validation and test by date.
-# 
-# last_train_date <- dat$year = 2024, 8, 1)
-# last_val_date = pd.Timestamp(2020, 3, 24)
-# last_test_date = pd.Timestamp(2020, 4, 23)
-# 
-# train_df = main_df[main_df['Date'] <= last_train_date].copy()
-# val_df = main_df[(main_df['Date'] > last_train_date) & (main_df['Date'] <= last_eval_date)].copy()
-# test_df = main_df[main_df['Date'] > last_eval_date].copy()
 
+set.seed(123)
 
+# Create a random sample of row indices
+n <- nrow(dat)
+train_idx <- sample(1:n, size = 0.6 * n)  # 60% for training
+remaining <- setdiff(1:n, train_idx)      # Remaining 40%
 
-#Split data into test, train and validate 
-#Option 1  This equation takes the square root of the number of unique observations 
+# Split remaining data into test (20%) and validation (20%)
+#note that this method was used to ensure that there is no repeated data being used
+test_idx <- sample(remaining, size = 0.5 * length(remaining)) #uses 50% of left over data, e.g. 20% of OG data
+validate_idx <- setdiff(remaining, test_idx)
 
-# Compute the number of unique rows in the dataset
-Nu <- nrow(distinct(dat))
+# Create the subsets
+train_data <- dat[train_idx, ]
+test_data <- dat[test_idx, ]
+validate_data <- dat[validate_idx, ]
 
-# Compute p as the square root of Nu
-p <- sqrt(Nu)
-
-# Print the result
-print(p)
-
-##option 2 - This equation takes the square root of the number of represents the number of parameters in a linear regression model
-
-# Fit a linear regression model (example using dataset 'dat')
-model <- lm(y ~ ., data = dat)  # Assuming 'y' is the response variable
-
-# Get the number of parameters in the model (including intercept)
-p1 <- length(coef(model))
-
-# Compute the square root of p1
-sqrt_p1 <- sqrt(p1)
-
-# Print the ratio
-ratio <- paste(sqrt_p1, ": 1")
-print(ratio)
+#check that it split up correctly 
+cat("Train:", nrow(train_data), "rows\n")
+cat("Test:", nrow(test_data), "rows\n")
+cat("Validate:", nrow(validate_data), "rows\n")
 
 
 
