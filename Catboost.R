@@ -12,13 +12,13 @@ library(rsample)
 # 2. Prep data ----
 dat <- read_csv("Data/dat.csv")
 
-dat[] <- lapply(dat, function(x) {
-  if(is.numeric(x)) {
-    # Replace NA with NaN for numeric columns
-    x[is.na(x)] <- '-9999'
-  }
-  return(x)
-})
+# dat[] <- lapply(dat, function(x) {
+#   if(is.numeric(x)) {
+#     # Replace NA with NaN for numeric columns
+#     x[is.na(x)] <- '-9999'
+#   }
+#   return(x)
+# })
 
 
 
@@ -33,13 +33,12 @@ dat$hour <- as.numeric(format(dat$time, "%H"))
 # 3. Subset data ----
 set.seed(123)
 
-# Create a random sample of row indices
+# Create a random sample
 n <- nrow(dat)
 train_idx <- sample(1:n, size = 0.6 * n)  # 60% for training
-remaining <- setdiff(1:n, train_idx)      # Remaining 40%
+remaining <- setdiff(1:n, train_idx)      # Remaining 40%for test and validation
 
 # Split remaining data into test (20%) and validation (20%)
-# Note that this method was used to ensure that there is no repeated data being used
 test_idx <- sample(remaining, size = 0.5 * length(remaining)) # Uses 50% of left over data, e.g., 20% of original data
 validate_idx <- setdiff(remaining, test_idx)
 
@@ -54,19 +53,15 @@ cat("Test:", nrow(test_data), "rows\n")
 cat("Validate:", nrow(validate_data), "rows\n")
 
 # 4. Define features and target variable  ----
-
-# Define target and feature variables
-target <- c("level_metres")  # Target variable is 'level_metres'
+target <- c("level_metres") 
 features <- setdiff(names(train_data), c(target, "quality_rainfall", "quality_level", "quality_discharge", "var", "time"))  
 # Exclude 'quality' columns and 'time' from features
 
-# Convert categorical features to factor
+# Convert categorical features to factor, the model should register that this is then a categorical variable bc it is a factor
 train_data$site <- as.factor(train_data$site)
 test_data$site <- as.factor(test_data$site)
 
-
-# Print the list of features used
-print(features)
+# print(features)
 
 # Split into X (features) and Y (target)
 x_train <- train_data[, features]  # Feature variables for training set
@@ -94,8 +89,8 @@ params <- list(
   verbose = 100,           # Show progress every 100 iterations
   l2_leaf_reg = 10,        # L2 regularization parameter (higher values prevent overfitting)
   random_seed = 42,        # Set random seed for reproducibility
-  early_stopping_rounds = 50, 
-  nan_mode = "Forbidden"   # Missing values are not allowed and will result in an error
+  early_stopping_rounds = 50 
+  # nan_mode = "Forbidden"   # Missing values are not allowed and will result in an error
 )
 
 # 7. Train the Model ----
@@ -106,7 +101,7 @@ model <- catboost.train(train_pool, params = params)
 predictions <- catboost.predict(model, test_pool)
 
 # 9 Evaluate model performance ----
-library(Metrics)
-rmse(y_test, predictions)  # Root Mean Square Error
-mae(y_test, predictions)   # Mean Absolute Error
+# library(Metrics)
+# rmse(y_test, predictions)  
+# mae(y_test, predictions) 
 
