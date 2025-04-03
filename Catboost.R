@@ -90,7 +90,7 @@ params <- list(
   l2_leaf_reg = 10,        # L2 regularization parameter (higher values prevent overfitting)
   random_seed = 42,        # Set random seed for reproducibility
   early_stopping_rounds = 50 
-  # nan_mode = "Forbidden"   # Missing values are not allowed and will result in an error
+  # nan_mode = "MIN"   # Missing values are not allowed and will result in an error
 )
 
 # 7. Train the Model ----
