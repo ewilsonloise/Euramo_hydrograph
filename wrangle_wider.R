@@ -1,17 +1,21 @@
 
-# #Data Wrangle 
-# 
-# #Libraries
+# Data Wrangle 
+
+# Libraries
 library(tidyverse)
 library(lubridate)
 library(dplyr)
 library(readr)
 
-#Cochable_Creek height 
+# -----------------------------------------------------------
+# 113004A Cochable Creek at Powerline
+
+# Cochable_Creek height data
 cc_h <- read_csv("Data/Raw/113004A.H.CSV") %>%
   mutate(time = format(time, "%Y-%m-%d %H")) %>% 
   rename(height_metres_value = value) %>% 
   rename(height_metres_quality = quality)
+
 cc_h <- cc_h %>%
   pivot_wider(
     names_from = varname,
@@ -20,11 +24,12 @@ cc_h <- cc_h %>%
   ) %>% 
   select(-var)
 
-#Cochable_Creek discharge 
+# Cochable_Creek discharge data
 cc_d <- read_csv("Data/Raw/113004A.Q.CSV") %>%
-     mutate(time = format(time, "%Y-%m-%d %H")) %>% 
+  mutate(time = format(time, "%Y-%m-%d %H")) %>% 
   rename(discharge_cumecs_value = value) %>% 
   rename(discharge_cumecs_quality = quality)
+
 cc_d <- cc_d %>%
   pivot_wider(
     names_from = varname,
@@ -33,12 +38,17 @@ cc_d <- cc_d %>%
   ) %>% 
   select(-var)
 
+cc_test <- left_join(cc_h, cc_d, by = c("CC_site" = "CC_site", "time" = "time"))
+
 # --------------------------------------------------------------    
-    
+# 113006A Tully River at Euramo
+
+# Tully River at Euramo Rainfall data  
 tre_r <- read_csv("Data/Raw/113006A.R.CSV") %>%
-    mutate(time = format(time, "%Y-%m-%d %H"))%>%
+  mutate(time = format(time, "%Y-%m-%d %H")) %>%
   rename(rainfall_mm_value = value) %>% 
   rename(rainfall_mm_quality = quality)
+
 tre_r <- tre_r %>%
   pivot_wider(
     names_from = varname,
@@ -46,111 +56,108 @@ tre_r <- tre_r %>%
     names_glue = "TRE_{.value}"
   ) %>% 
   select(-var)
-      
-tre_h <-read_csv("Data/Raw/113006A.H.CSV")%>%
-           mutate(time = format(time, "%Y-%m-%d %H"))%>%
-        rename(height_metres_value = value) %>% 
-        rename(height_metres_quality = quality)
-      
+
+# Tully River at Euramo Height data  
+tre_h <- read_csv("Data/Raw/113006A.H.CSV") %>%
+  mutate(time = format(time, "%Y-%m-%d %H")) %>%
+  rename(height_metres_value = value) %>% 
+  rename(height_metres_quality = quality)
+
 tre_h <- tre_h %>%
-        pivot_wider(
-          names_from = varname,
-          values_from = c(height_metres_value, height_metres_quality, site),
-          names_glue = "TRE_{.value}"
-        ) %>% 
-        select(-var)
+  pivot_wider(
+    names_from = varname,
+    values_from = c(height_metres_value, height_metres_quality, site),
+    names_glue = "TRE_{.value}"
+  ) %>% 
+  select(-var)
 
-
+# Tully River at Euramo Discharge data  
 tre_d <- read_csv("Data/Raw/113006A.Q.CSV") %>%
-              mutate(time = format(time, "%Y-%m-%d %H")) %>% 
-              rename(discharge_cumecs_value = value) %>% 
-              rename(discharge_cumecs_quality = quality)
-            tre_d <- tre_d %>%
-              pivot_wider(
-                names_from = varname,
-                values_from = c(discharge_cumecs_value, discharge_cumecs_quality, site),
-                names_glue = "TRE_{.value}"
-              ) %>% 
-              select(-var)
+  mutate(time = format(time, "%Y-%m-%d %H")) %>% 
+  rename(discharge_cumecs_value = value) %>% 
+  rename(discharge_cumecs_quality = quality)
+
+tre_d <- tre_d %>%
+  pivot_wider(
+    names_from = varname,
+    values_from = c(discharge_cumecs_value, discharge_cumecs_quality, site),
+    names_glue = "TRE_{.value}"
+  ) %>% 
+  select(-var)
+
+tre_dat <- left_join(tre_h, tre_d, tre_r, by = c("TRE_site" = "TRE_site", "time" = "time"))
+
 
 # ---------------------------------------------------
-      
-      
+# 113015A Tully River at Tully Gorge National Park      
 
-c <- read_csv("Data/Raw/113015A.H.CSV") %>%
-     mutate(time = format(time, "%Y-%m-%d %H")) %>%
-     rename(quality_height = quality)
-      c$quality_rainfall <- NA
-      c$quality_discharge <- NA
-#       
-#     
-# #Rainfall data  
-# d <- read_csv("Data/Raw/114001A.R.CSV") %>%
-#      mutate(time = format(time, "%Y-%m-%d %H")) %>% 
-#      rename(quality_rainfall = quality)
-#       d$quality_height <- NA
-#       d$quality_discharge <- NA
-# 
-# e <- read_csv("Data/Raw/113015A.R.CSV") %>%
-#      mutate(time = format(time, "%Y-%m-%d %H")) %>% 
-#      rename(quality_rainfall = quality)
-#       e$quality_height <- NA
-#       e$quality_discharge <- NA
-# 
+# Tully River at Tully Gorge National Park Height data  
+trg_h <- read_csv("Data/Raw/113015A.H.CSV") %>%
+  mutate(time = format(time, "%Y-%m-%d %H")) %>%
+  rename(height_metres_value = value) %>% 
+  rename(height_metres_quality = quality)
 
-# 
-#       
-# #Discharge data  
-# g <- read_csv("Data/Raw/113015A.Q.CSV") %>%
-#      mutate(time = format(time, "%Y-%m-%d %H")) %>% 
-#      rename(quality_discharge = quality)
-#       g$quality_rainfall <- NA
-#       g$quality_height <- NA
+trg_h <- trg_h %>%
+  pivot_wider(
+    names_from = varname,
+    values_from = c(height_metres_value, height_metres_quality, site),
+    names_glue = "TRG_{.value}"
+  ) %>% 
+  select(-var)
 
-#      
+# Tully River at Tully Gorge National Park Rainfall data  
+trg_r <- read_csv("Data/Raw/113015A.R.CSV") %>%
+  mutate(time = format(time, "%Y-%m-%d %H")) %>%
+  rename(rainfall_mm_value = value) %>% 
+  rename(rainfall_mm_quality = quality)
 
-# 
-# dat <- rbind(a,b,c,d,e,f,g,h,i)      
-#       
-#             
-# 
-# dat1 <- dat %>%
-#   pivot_wider(names_from = "varname", values_from = "value") %>%
-#   janitor::clean_names()
-# 
-# # df2 <- rbind(
-# #   (read_csv("Data/Raw/Koombooloomba_Dam_031083_1800_Data.csv") %>%
-# #      unite(col = "time", Year, Month, Day, sep = "-")),
-# #   (read_csv("Data/Raw/Tully_Sugar_Mill_032042_1800_Data.csv") %>%
-# #     unite(col = "time", Year, Month, Day, sep = "-"))) %>%
-# #   mutate(time = as.Date(time)) %>%
-# #   rename(
-# #     rainfall_mm = `Rainfall amount (millimetres)`,
-# #     site = `Bureau of Meteorology station number`,
-# #     quality = Quality) %>%
-# #   select(-`Product code`, -`Period over which rainfall was measured (days)`)
-# 
-# df2$discharge_cumecs <- NA
-# df2$var <- NA
-# df2$level_metres <- NA
-# 
-# column_order <- c("site", "time", "quality", "var", "rainfall_mm", "discharge_cumecs", "level_metres")
-# 
-# dat <- dat %>% select(all_of(column_order))
-# df2 <- df2 %>% select(all_of(column_order))
-# 
-# 
-# (names(dat))
-# (names(df2))
-# 
-# dat_joined <- rbind(dat, df2)
-# 
-# dat_joined <- dat_joined %>% filter(time >= as.Date("2009-12-23") & time <= as.Date("2024-08-01"))
-# 
-# colnames(dat_joined)
-# 
-# # skimr::skim(dat_joined)
-# # summarytools::dfSummary(dat_joined)
-# 
-# 
-# write_csv(dat_joined, "Data/dat_joined.csv")
+trg_r <- trg_r %>%
+  pivot_wider(
+    names_from = varname,
+    values_from = c(rainfall_mm_value, rainfall_mm_quality, site),
+    names_glue = "TRG_{.value}"
+  ) %>% 
+  select(-var)
+
+# Tully River at Tully Gorge National Park Discharge data  
+trg_d <- read_csv("Data/Raw/113015A.Q.CSV") %>%
+  mutate(time = format(time, "%Y-%m-%d %H")) %>% 
+  rename(discharge_cumecs_value = value) %>% 
+  rename(discharge_cumecs_quality = quality)
+
+trg_d <- trg_d %>%
+  pivot_wider(
+    names_from = varname,
+    values_from = c(discharge_cumecs_value, discharge_cumecs_quality, site),
+    names_glue = "TRG_{.value}"
+  ) %>% 
+  select(-var)
+
+trg_dat <- left_join(trg_h, trg_d, trg_r, by = c("TRG_site" = "TRG_site", "time" = "time"))
+
+
+# ------------------------------------------------------------
+# 114001A Murray River at Upper Murray
+
+# Murray River at Upper Murray Rainfall data  
+mru_r <- read_csv("Data/Raw/114001A.R.CSV") %>%
+  mutate(time = format(time, "%Y-%m-%d %H")) %>%
+  rename(rainfall_mm_value = value) %>% 
+  rename(rainfall_mm_quality = quality)
+
+mru_r <- mru_r %>%
+  pivot_wider(
+    names_from = varname,
+    values_from = c(rainfall_mm_value, rainfall_mm_quality, site),
+    names_glue = "MRU_{.value}"
+  ) %>% 
+  select(-var)
+
+# ---------------------------------------------------------------   
+
+dat1 <- left_join(trg_dat, tre_dat, by = c("time" = "time"))
+dat <- left_join(dat1, mru_r, by = c("time" = "time"))
+
+
+ write_csv(dat, "Data/dat.csv")
+ 
