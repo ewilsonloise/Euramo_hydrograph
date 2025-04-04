@@ -8,60 +8,72 @@ library(dplyr)
 library(readr)
 
 #Cochable_Creek height 
-a <- read_csv("Data/Raw/113004A.H.CSV") %>%
+cc_h <- read_csv("Data/Raw/113004A.H.CSV") %>%
   mutate(time = format(time, "%Y-%m-%d %H")) %>% 
   rename(height_metres_value = value) %>% 
-  rename(height_cumecs_quality = quality)
-aa <- a %>%
+  rename(height_metres_quality = quality)
+cc_h <- cc_h %>%
   pivot_wider(
     names_from = varname,
-    values_from = c(height_metres_value, height_metres_value, site),
-    names_glue = "Cochable_Creek_{.value}"
+    values_from = c(height_metres_value, height_metres_quality, site),
+    names_glue = "CC_{.value}"
   ) %>% 
   select(-var)
 
 #Cochable_Creek discharge 
-i <- read_csv("Data/Raw/113004A.Q.CSV") %>%
+cc_d <- read_csv("Data/Raw/113004A.Q.CSV") %>%
      mutate(time = format(time, "%Y-%m-%d %H")) %>% 
   rename(discharge_cumecs_value = value) %>% 
   rename(discharge_cumecs_quality = quality)
-ii <- i %>%
+cc_d <- cc_d %>%
   pivot_wider(
     names_from = varname,
     values_from = c(discharge_cumecs_value, discharge_cumecs_quality, site),
-    names_glue = "Cochable_Creek_{.value}"
+    names_glue = "CC_{.value}"
   ) %>% 
   select(-var)
-
-test <- left_join(aa, ii, by = c("time" = "time", "Cochable_Creek_site" = "Cochable_Creek_site"))
 
 # --------------------------------------------------------------    
     
-
-b <- read_csv("Data/Raw/113006A.H.CSV") %>%
+tre_r <- read_csv("Data/Raw/113006A.R.CSV") %>%
     mutate(time = format(time, "%Y-%m-%d %H"))%>%
-  rename(height_metres_value = value) %>% 
-  rename(height_cumecs_quality = quality)
-bb <- b %>%
+  rename(rainfall_mm_value = value) %>% 
+  rename(rainfall_mm_quality = quality)
+tre_r <- tre_r %>%
   pivot_wider(
     names_from = varname,
-    values_from = c(height_metres_value, height_metres_value, site),
-    names_glue = "Tully_Euramo_{.value}"
+    values_from = c(rainfall_mm_value, rainfall_mm_quality, site),
+    names_glue = "TRE_{.value}"
   ) %>% 
   select(-var)
       
-      f <- read_csv("Data/Raw/113006A.R.CSV") %>%
-           mutate(time = format(time, "%Y-%m-%d %H")) %>%
-           rename(quality_rainfall = quality)
+tre_h <-read_csv("Data/Raw/113006A.H.CSV")%>%
+           mutate(time = format(time, "%Y-%m-%d %H"))%>%
+        rename(height_metres_value = value) %>% 
+        rename(height_metres_quality = quality)
+      
+tre_h <- tre_h %>%
+        pivot_wider(
+          names_from = varname,
+          values_from = c(height_metres_value, height_metres_quality, site),
+          names_glue = "TRE_{.value}"
+        ) %>% 
+        select(-var)
 
-            
 
+tre_d <- read_csv("Data/Raw/113006A.Q.CSV") %>%
+              mutate(time = format(time, "%Y-%m-%d %H")) %>% 
+              rename(discharge_cumecs_value = value) %>% 
+              rename(discharge_cumecs_quality = quality)
+            tre_d <- tre_d %>%
+              pivot_wider(
+                names_from = varname,
+                values_from = c(discharge_cumecs_value, discharge_cumecs_quality, site),
+                names_glue = "TRE_{.value}"
+              ) %>% 
+              select(-var)
 
-            h <- read_csv("Data/Raw/113006A.Q.CSV") %>%
-                 mutate(time = format(time, "%Y-%m-%d %H")) %>%
-                 rename(quality_discharge = quality)
-
-
+# ---------------------------------------------------
       
       
 
