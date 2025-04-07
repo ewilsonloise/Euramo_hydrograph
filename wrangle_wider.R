@@ -14,12 +14,14 @@ library(readr)
 cc_h <- read_csv("Data/Raw/113004A.H.CSV") %>%
   mutate(time = format(time, "%Y-%m-%d %H")) %>% 
   rename(height_metres_value = value) %>% 
-  rename(height_metres_quality = quality)
+  rename(height_metres_quality = quality)%>%
+  arrange(site, time) %>%
+  mutate(height_deriv_value = height_metres_value - lag(height_metres_value))
 
 cc_h <- cc_h %>%
   pivot_wider(
     names_from = varname,
-    values_from = c(height_metres_value, height_metres_quality, site),
+    values_from = c(site, height_metres_value, height_deriv_value, height_metres_quality),
     names_glue = "CC_{.value}"
   ) %>% 
   select(-var)
@@ -38,7 +40,7 @@ cc_d <- cc_d %>%
   ) %>% 
   select(-var)
 
-cc_test <- left_join(cc_h, cc_d, by = c("CC_site" = "CC_site", "time" = "time"))
+cc_dat <- left_join(cc_h, cc_d, by = c("CC_site" = "CC_site", "time" = "time"))
 
 # --------------------------------------------------------------    
 # 113006A Tully River at Euramo
@@ -60,15 +62,15 @@ tre_r <- tre_r %>%
 # Tully River at Euramo Height data  
 tre_h <- read_csv("Data/Raw/113006A.H.CSV") %>%
   mutate(time = format(time, "%Y-%m-%d %H")) %>%
-  rename(height_metres_value = value) %>% 
-  rename(height_metres_quality = quality)
-
-tre_h <- tre_h %>%
+  rename(height_metres_value = value,
+         height_metres_quality = quality) %>%
+  arrange(site, time) %>%
+  mutate(height_deriv_value = height_metres_value - lag(height_metres_value)) %>%
   pivot_wider(
     names_from = varname,
-    values_from = c(height_metres_value, height_metres_quality, site),
+    values_from = c(site, height_metres_value, height_deriv_value, height_metres_quality),
     names_glue = "TRE_{.value}"
-  ) %>% 
+  ) %>%
   select(-var)
 
 # Tully River at Euramo Discharge data  
@@ -85,8 +87,8 @@ tre_d <- tre_d %>%
   ) %>% 
   select(-var)
 
-tre_dat <- left_join(tre_h, tre_d, tre_r, by = c("TRE_site" = "TRE_site", "time" = "time"))
-
+tre_dat <- left_join(tre_h, tre_d, by = c("TRE_site" = "TRE_site", "time" = "time"))
+tre_dat <- left_join(tre_dat, tre_r, by = c("TRE_site" = "TRE_site", "time" = "time"))
 
 # ---------------------------------------------------
 # 113015A Tully River at Tully Gorge National Park      
@@ -95,12 +97,14 @@ tre_dat <- left_join(tre_h, tre_d, tre_r, by = c("TRE_site" = "TRE_site", "time"
 trg_h <- read_csv("Data/Raw/113015A.H.CSV") %>%
   mutate(time = format(time, "%Y-%m-%d %H")) %>%
   rename(height_metres_value = value) %>% 
-  rename(height_metres_quality = quality)
+  rename(height_metres_quality = quality)%>%
+  arrange(site, time) %>%
+  mutate(height_deriv_value = height_metres_value - lag(height_metres_value)) 
 
 trg_h <- trg_h %>%
   pivot_wider(
     names_from = varname,
-    values_from = c(height_metres_value, height_metres_quality, site),
+    values_from = c(site, height_metres_value, height_deriv_value, height_metres_quality),
     names_glue = "TRG_{.value}"
   ) %>% 
   select(-var)
@@ -133,8 +137,8 @@ trg_d <- trg_d %>%
   ) %>% 
   select(-var)
 
-trg_dat <- left_join(trg_h, trg_d, trg_r, by = c("TRG_site" = "TRG_site", "time" = "time"))
-
+trg_dat <- left_join(trg_h, trg_d, by = c("TRG_site" = "TRG_site", "time" = "time"))
+trg_dat <- left_join(trg_dat, trg_r, by = c("TRG_site" = "TRG_site", "time" = "time"))
 
 # ------------------------------------------------------------
 # 114001A Murray River at Upper Murray
@@ -156,8 +160,25 @@ mru_r <- mru_r %>%
 # ---------------------------------------------------------------   
 
 dat1 <- left_join(trg_dat, tre_dat, by = c("time" = "time"))
-dat <- left_join(dat1, mru_r, by = c("time" = "time"))
+dat2 <- left_join(cc_dat, mru_r, by = c("time" = "time"))
+
+dat <- left_join(dat1, dat2, by = c("time" = "time"))
+
+# vis_miss(dat, warn_large_data = FALSE) #note only 3 cells have NAa, but they need to be removed 
+dat_na <- na.omit(dat) #remove the three rows with NA values 
+
+# vis_miss(dat_na, warn_large_data = FALSE) # data is 100% present 
+
+write_csv(dat, "Data/dat.csv")
 
 
- write_csv(dat, "Data/dat.csv")
+dat_lag <- dat %>%  select(c(time, TRE_height_metres_value, TRG_rainfall_mm_value))
+
+dat_lag <- dat_lag %>%
+  mutate(
+    rain = TRG_rainfall_mm_value,
+    height = TRE_height_metres_value
+  )
  
+model <- lm(height ~ rain, data = dat_lag)
+
