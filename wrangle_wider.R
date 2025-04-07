@@ -174,11 +174,6 @@ write_csv(dat, "Data/dat.csv")
 
 dat_lag <- dat %>%  select(c(time, TRE_height_metres_value, TRG_rainfall_mm_value))
 
-dat_lag <- dat_lag %>%
-  mutate(
-    rain = TRG_rainfall_mm_value,
-    height = TRE_height_metres_value
-  )
  
 model <- lm(height ~ rain, data = dat_lag)
 

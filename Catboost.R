@@ -12,16 +12,6 @@ library(rsample)
 # 2. Prep data ----
 dat <- read_csv("Data/dat.csv")
 
-# dat[] <- lapply(dat, function(x) {
-#   if(is.numeric(x)) {
-#     # Replace NA with NaN for numeric columns
-#     x[is.na(x)] <- '-9999'
-#   }
-#   return(x)
-# })
-
-
-
 # Note that catboost can't handle date/time strings
 dat$time <- as.POSIXct(dat$time, format = "%Y-%m-%d %H")
 
@@ -53,13 +43,25 @@ cat("Test:", nrow(test_data), "rows\n")
 cat("Validate:", nrow(validate_data), "rows\n")
 
 # 4. Define features and target variable  ----
-target <- c("level_metres") 
-features <- setdiff(names(train_data), c(target, "quality_rainfall", "quality_level", "quality_discharge", "var", "time"))  
-# Exclude 'quality' columns and 'time' from features
+target <- c("TRE_height_metres_value") 
+features <- setdiff(names(train_data), c(target, # Exclude 'quality' columns and 'time' from features
+                                         "TRG_height_metres_quality", "TRG_discharge_cumecs_quality", "TRG_rainfall_mm_quality", 
+                                         "TRE_height_metres_value", "TRE_height_metres_quality", "TRE_discharge_cumecs_quality", 
+                                         "TRE_rainfall_mm_quality", "CC_height_metres_value", "CC_height_metres_quality", 
+                                         "CC_discharge_cumecs_quality", "MRU_rainfall_mm_quality", "time"))
+
 
 # Convert categorical features to factor, the model should register that this is then a categorical variable bc it is a factor
-train_data$site <- as.factor(train_data$site)
-test_data$site <- as.factor(test_data$site)
+train_data$TRG_site <- as.factor(train_data$TRG_site)
+train_data$TRE_site <- as.factor(train_data$TRE_site)
+train_data$CC_site <- as.factor(train_data$CC_site)
+train_data$MRU_site <- as.factor(train_data$MRU_site)
+
+
+test_data$TRG_site <- as.factor(test_data$TRG_site)
+test_data$TRE_site <- as.factor(test_data$TRE_site)
+test_data$CC_site <- as.factor(test_data$CC_site)
+test_data$MRU_site <- as.factor(test_data$MRU_site)
 
 # print(features)
 
@@ -90,7 +92,6 @@ params <- list(
   l2_leaf_reg = 10,        # L2 regularization parameter (higher values prevent overfitting)
   random_seed = 42,        # Set random seed for reproducibility
   early_stopping_rounds = 50 
-  # nan_mode = "MIN"   # Missing values are not allowed and will result in an error
 )
 
 # 7. Train the Model ----
