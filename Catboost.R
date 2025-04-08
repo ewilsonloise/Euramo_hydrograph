@@ -49,7 +49,7 @@ features <- setdiff(names(train_data), c(target, # Exclude 'quality' columns and
                                          "TRE_height_metres_value", "TRE_height_metres_quality", "TRE_discharge_cumecs_quality", 
                                          "TRE_rainfall_mm_quality", "CC_height_metres_value", "CC_height_metres_quality", 
                                          "CC_discharge_cumecs_quality", "MRU_rainfall_mm_quality", "time"))
-
+features
 
 # Convert categorical features to factor, the model should register that this is then a categorical variable bc it is a factor
 train_data$TRG_site <- as.factor(train_data$TRG_site)
@@ -91,41 +91,119 @@ params <- list(
   verbose = 100,           # Show progress every 100 iterations
   l2_leaf_reg = 10,        # L2 regularization parameter (higher values prevent overfitting)
   random_seed = 42,        # Set random seed for reproducibility
-  early_stopping_rounds = 50 
+  logging_level = 'Verbose', 
+  od_type = 'Iter', #over fitting detector
+  od_wait = 50 #If no validation improvement in 50 rounds, stop. od wait value = 5-10% of iterations 
 )
 
-# 7. Train the Model ----
-model <- catboost.train(train_pool, params = params)
+# 7. Cross-validate model -----
+
+cv_params <- list(
+  loss_function = "RMSE",     
+  iterations = 4000,          # Max iterations before early stopping kicks in, went from 1000 to 2000
+  depth = 4,                  # Tree depth
+  learning_rate = 0.02,       
+  verbose = 100,              # Print progress every 100 rounds
+  l2_leaf_reg = 20,           # Regularization
+  random_seed = 42,           
+  logging_level = 'Verbose'   
+)
 
 
-# 8 Make predictions ----
+catboost_cv <- catboost.cv(
+  train_pool,
+  params = cv_params,
+  fold_count = 5,
+  type = "TimeSeries",
+  partition_random_seed = 42,
+  shuffle = FALSE,
+  stratified = FALSE,
+  early_stopping_rounds = 50
+)
+
+head(catboost_cv)
+
+best_iter <- which.min(catboost_cv$test.RMSE.mean)
+best_rmse <- min(catboost_cv$test.RMSE.mean)
+
+
+catboost_cv$Iteration <- seq_len(nrow(catboost_cv))
+
+library(ggplot2)
+
+rmse_4000 <- ggplot(catboost_cv, aes(x = Iteration)) +
+  geom_line(aes(y = test.RMSE.mean), color = "blue", linewidth = 1) +
+  geom_line(aes(y = train.RMSE.mean), color = "darkgreen", linetype = "dashed") +
+  geom_vline(xintercept = best_iter, color = "red", linetype = "dotted") +
+  annotate("text",
+           x = best_iter,
+           y = best_rmse,
+           label = paste("Best Iter:", best_iter),
+           hjust = -0.1, vjust = -1, color = "red", size = 3.5) +
+  labs(
+    title = "Cross-validated RMSE vs Iteration",
+    subtitle = "Blue = Validation RMSE | Dashed Green = Training RMSE",
+    x = "Iteration",
+    y = "RMSE"
+  ) +
+  theme_minimal()
+
+
+# Get final training and test RMSE from the best iteration
+best_iter <- which.min(catboost_cv$test.RMSE.mean)
+
+test_rmse <- catboost_cv$test.RMSE.mean[best_iter]
+train_rmse <- catboost_cv$train.RMSE.mean[best_iter]
+rmse_gap_ratio <- (test_rmse - train_rmse) / train_rmse
+
+cat("Best Iteration:", catboost_cv$Iteration[best_iter], "\n")
+cat("Test RMSE:", round(test_rmse, 4), "\n")
+cat("Train RMSE:", round(train_rmse, 4), "\n")
+cat("RMSE Gap Ratio:", round(rmse_gap_ratio * 100, 2), "%\n")
+
+# Interpret the gap
+if (rmse_gap_ratio > 0.2) {
+  cat("Likely overfitting: test RMSE is significantly higher than train RMSE.\n")
+} else if (rmse_gap_ratio < 0.05) {
+  if (test_rmse > 2 && train_rmse > 2) {
+    cat("Likely underfitting: both RMSEs are high and close together.\n")
+  } else {
+    cat("Model is well balanced with minimal gap.\n")
+  }
+} else {
+  cat("Acceptable gap between test and train RMSE — likely well-generalized.\n")
+}
+
+
+
+
+
+# 8. Train the Model ----
+model <- catboost.train(train_pool, test_pool, params = params)
+
+# 9. Make predictions ----
 predictions <- catboost.predict(model, test_pool)
 
-# 9 Evaluate model performance ----
+# 10. Evaluate model performance ----
+## Metrics and stats  ----
 library(Metrics)
+
+range_y <- range(y_test[[1]])
+### RMSE  ----
+rmse_relative <- rmse(y_test[[1]], predictions) / diff(range_y)
+cat("Relative RMSE:", round(100 * rmse_relative, 2), "%\n")
+
 cat("RMSE:", rmse(y_test[[1]], predictions), "\n")
 cat("MAE:", mae(y_test[[1]], predictions), "\n")
 
-# Evaluate feature importance  ----
-## Get feature importance scores from the trained model
-importance <- catboost.get_feature_importance(model, pool = train_pool, type = "FeatureImportance")
-importance_df <- data.frame(Feature = features, Importance = importance)
-
-## Print the top N important features in the R console
-importance_df_sorted <- importance_df %>%
-  arrange(desc(Importance))
-
-print("Top 10 Most Important Features:")
-print(head(importance_df_sorted, 10))
-
-# Plot feature importance using ggplot
-ggplot(importance_df_sorted, aes(x = reorder(Feature, Importance), y = Importance)) +
-  geom_col() +
-  coord_flip() +
-  labs(title = "Feature Importance", x = "Feature", y = "Importance")
+### R²  ----
+ss_res <- sum((y_test[[1]] - predictions)^2)
+ss_tot <- sum((y_test[[1]] - mean(y_test[[1]]))^2)
+r_squared <- 1 - ss_res / ss_tot
+cat("R²:", round(r_squared, 4), "\n")
 
 
-# Prediction diagnostics ----
+### Prediction diagnostics  ----
 results_df <- tibble(
   Actual = y_test[[1]],
   Predicted = predictions
@@ -135,5 +213,29 @@ ggplot(results_df, aes(x = Actual, y = Predicted)) +
   geom_point(alpha = 0.4) +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
   labs(title = "Predicted vs Actual", x = "Actual", y = "Predicted")
+
+
+
+# Check for overfitting/ underfitting 
+
+
+
+
+
+# 11. Evaluate feature importance  ----
+## Feature importance scores ----
+importance <- catboost.get_feature_importance(model, pool = train_pool, type = "FeatureImportance")
+importance_df <- data.frame(Feature = features, Importance = importance)
+
+print(head(importance_df_sorted, 10))
+
+## Plot feature importance using ggplot ----
+ggplot(importance_df_sorted, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Feature Importance", x = "Feature", y = "Importance")
+
+
+
 
 

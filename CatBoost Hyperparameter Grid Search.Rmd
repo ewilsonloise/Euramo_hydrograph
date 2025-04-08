@@ -1,0 +1,105 @@
+---
+title: "CatBoost Hyperparameter Grid Search"
+author: "Your Name"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(catboost)
+library(ggplot2)
+library(dplyr)
+```
+
+## Load and Prepare Data
+
+```{r}
+# Assume data is already split and train_pool is prepared
+data_loaded <- exists("train_pool")
+if (!data_loaded) stop("Please define train_pool before running this grid search.")
+```
+
+## Define Hyperparameter Grid
+
+```{r}
+depths <- c(4, 6, 8)
+learning_rates <- c(0.01, 0.02, 0.05)
+l2_regs <- c(3, 10, 30)
+rsm_values <- c(1.0, 0.9, 0.8)
+
+param_grid <- expand.grid(
+  depth = depths,
+  learning_rate = learning_rates,
+  l2_leaf_reg = l2_regs,
+  rsm = rsm_values
+)
+
+results <- data.frame()
+```
+
+## Run Grid Search with Cross-Validation
+
+```{r, message=TRUE}
+for (i in 1:nrow(param_grid)) {
+  p <- param_grid[i, ]
+  
+  cv_params <- list(
+    loss_function = "RMSE",
+    iterations = 5000,
+    depth = p$depth,
+    learning_rate = p$learning_rate,
+    l2_leaf_reg = p$l2_leaf_reg,
+    rsm = p$rsm,
+    random_seed = 42,
+    logging_level = "Silent"
+  )
+  
+  cv <- catboost.cv(
+    pool = train_pool,
+    params = cv_params,
+    fold_count = 5,
+    type = "TimeSeries",
+    shuffle = FALSE,
+    stratified = FALSE,
+    partition_random_seed = 42,
+    early_stopping_rounds = 50
+  )
+  
+  best_iter <- which.min(cv$test.RMSE.mean)
+  best_rmse <- min(cv$test.RMSE.mean)
+  
+  results <- rbind(results, data.frame(
+    depth = p$depth,
+    learning_rate = p$learning_rate,
+    l2_leaf_reg = p$l2_leaf_reg,
+    rsm = p$rsm,
+    best_iter = best_iter,
+    best_rmse = best_rmse
+  ))
+}
+```
+
+## Display and Save Results
+
+```{r}
+results_sorted <- arrange(results, best_rmse)
+print(head(results_sorted, 10))
+
+# Optionally save
+# write.csv(results_sorted, "catboost_grid_results.csv", row.names = FALSE)
+```
+
+## Plot RMSE Across Learning Rate and Depth
+
+```{r}
+ggplot(results, aes(x = learning_rate, y = best_rmse, color = as.factor(depth))) +
+  geom_point(size = 3, alpha = 0.7) +
+  facet_wrap(~ l2_leaf_reg, labeller = label_both) +
+  labs(
+    title = "Validation RMSE by Learning Rate, Depth, and L2 Regularization",
+    x = "Learning Rate",
+    y = "Best Test RMSE",
+    color = "Depth"
+  ) +
+  theme_minimal()
