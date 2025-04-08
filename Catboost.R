@@ -84,7 +84,7 @@ test_pool <- catboost.load_pool(
 
 # 6. Define Model Parameters ----
 params <- list(
-  loss_function = "RMSE",  # "RMSE" being used for regression and for being able to keep the NA values 
+  loss_function = "RMSE",  # "RMSE" being used for regression 
   iterations = 1000,       # If overfitting = reduce iterations, if underfitting = increase iterations
   depth = 6,               # Tree depth: common range 3-10, smaller values can prevent overfitting
   learning_rate = 0.02,     # Lower range: 0.01 - 0.05, higher range: 0.1 - 0.3
@@ -102,7 +102,38 @@ model <- catboost.train(train_pool, params = params)
 predictions <- catboost.predict(model, test_pool)
 
 # 9 Evaluate model performance ----
-# library(Metrics)
-# rmse(y_test, predictions)  
-# mae(y_test, predictions) 
+library(Metrics)
+cat("RMSE:", rmse(y_test[[1]], predictions), "\n")
+cat("MAE:", mae(y_test[[1]], predictions), "\n")
+
+# Evaluate feature importance  ----
+## Get feature importance scores from the trained model
+importance <- catboost.get_feature_importance(model, pool = train_pool, type = "FeatureImportance")
+importance_df <- data.frame(Feature = features, Importance = importance)
+
+## Print the top N important features in the R console
+importance_df_sorted <- importance_df %>%
+  arrange(desc(Importance))
+
+print("Top 10 Most Important Features:")
+print(head(importance_df_sorted, 10))
+
+# Plot feature importance using ggplot
+ggplot(importance_df_sorted, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Feature Importance", x = "Feature", y = "Importance")
+
+
+# Prediction diagnostics ----
+results_df <- tibble(
+  Actual = y_test[[1]],
+  Predicted = predictions
+)
+
+ggplot(results_df, aes(x = Actual, y = Predicted)) +
+  geom_point(alpha = 0.4) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Predicted vs Actual", x = "Actual", y = "Predicted")
+
 
