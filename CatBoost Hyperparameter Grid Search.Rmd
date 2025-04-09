@@ -8,11 +8,60 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(catboost)
-library(ggplot2)
-library(dplyr)
+library(tidyverse)
+library(rsample)
+library(Metrics)
 ```
 
-## Load and Prepare Data
+## 2025 - Load + Prepare Data
+
+```{r}
+# Load and preprocess dataset
+dat <- read_csv("Data/dat.csv")
+dat$time <- as.POSIXct(dat$time, format = "%Y-%m-%d %H")
+dat$year <- as.numeric(format(dat$time, "%Y"))
+dat$month <- as.numeric(format(dat$time, "%m"))
+dat$day <- as.numeric(format(dat$time, "%d"))
+dat$hour <- as.numeric(format(dat$time, "%H"))
+
+# Split dataset
+set.seed(123)
+n <- nrow(dat)
+train_idx <- sample(1:n, size = 0.6 * n)
+remaining <- setdiff(1:n, train_idx)
+test_idx <- sample(remaining, size = 0.5 * length(remaining))
+validate_idx <- setdiff(remaining, test_idx)
+
+train_data <- dat[train_idx, ]
+test_data <- dat[test_idx, ]
+validate_data <- dat[validate_idx, ]
+
+cat("Train:", nrow(train_data), "rows\n")
+cat("Test:", nrow(test_data), "rows\n")
+cat("Validate:", nrow(validate_data), "rows\n")
+```
+
+## Define Features and Pools
+```{r}
+target <- c("TRE_height_metres_value")
+features <- setdiff(names(train_data), c(target,
+                                         "TRG_height_metres_quality", "TRG_discharge_cumecs_quality", "TRG_rainfall_mm_quality", 
+                                         "TRE_height_metres_value", "TRE_height_metres_quality", "TRE_discharge_cumecs_quality", 
+                                         "TRE_rainfall_mm_quality", "CC_height_metres_value", "CC_height_metres_quality", 
+                                         "CC_discharge_cumecs_quality", "MRU_rainfall_mm_quality", "time"))
+
+factor_cols <- c("TRG_site", "TRE_site", "CC_site", "MRU_site")
+train_data[factor_cols] <- lapply(train_data[factor_cols], as.factor)
+test_data[factor_cols] <- lapply(test_data[factor_cols], as.factor)
+
+x_train <- train_data[, features]
+y_train <- train_data[, target]
+x_test <- test_data[, features]
+y_test <- test_data[, target]
+
+train_pool <- catboost.load_pool(data = x_train, label = y_train)
+test_pool <- catboost.load_pool(data = x_test, label = y_test)
+```
 
 ```{r}
 # Assume data is already split and train_pool is prepared
@@ -103,3 +152,6 @@ ggplot(results, aes(x = learning_rate, y = best_rmse, color = as.factor(depth)))
     color = "Depth"
   ) +
   theme_minimal()
+```
+
+

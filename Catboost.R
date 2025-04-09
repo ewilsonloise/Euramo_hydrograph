@@ -96,7 +96,7 @@ params <- list(
   od_wait = 50 #If no validation improvement in 50 rounds, stop. od wait value = 5-10% of iterations 
 )
 
-# 7. Cross-validate model -----
+# 7. Cross-validation grid search -----
 
 cv_params <- list(
   loss_function = "RMSE",     
