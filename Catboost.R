@@ -96,57 +96,89 @@ params <- list(
   od_wait = 50 #If no validation improvement in 50 rounds, stop. od wait value = 5-10% of iterations 
 )
 
-# 7. Cross-validation grid search -----
+# 7. Define Hyperparameter Grid -----
 
-cv_params <- list(
-  loss_function = "RMSE",     
-  iterations = 4000,          # Max iterations before early stopping kicks in, went from 1000 to 2000
-  depth = 4,                  # Tree depth
-  learning_rate = 0.02,       
-  verbose = 100,              # Print progress every 100 rounds
-  l2_leaf_reg = 20,           # Regularization
-  random_seed = 42,           
-  logging_level = 'Verbose'   
+depths <- c(4, 6, 8)
+learning_rates <- c(0.01, 0.02, 0.05)
+l2_regs <- c(3, 10, 30)
+rsm_values <- c(1.0, 0.9, 0.8)
+
+param_grid <- expand.grid(
+  depth = depths,
+  learning_rate = learning_rates,
+  l2_leaf_reg = l2_regs,
+  rsm = rsm_values
 )
 
+results <- data.frame()
 
-catboost_cv <- catboost.cv(
-  train_pool,
-  params = cv_params,
-  fold_count = 5,
-  type = "TimeSeries",
-  partition_random_seed = 42,
-  shuffle = FALSE,
-  stratified = FALSE,
-  early_stopping_rounds = 50
-)
+for (i in 1:nrow(param_grid)) {
+  p <- param_grid[i, ]
+  
+  cv_params <- list(
+    loss_function = "RMSE",
+    iterations = 2000,
+    depth = p$depth,
+    learning_rate = p$learning_rate,
+    l2_leaf_reg = p$l2_leaf_reg,
+    rsm = p$rsm,
+    random_seed = 42,
+    logging_level = "Silent"
+  )
+  
+  cv <- catboost.cv(
+    pool = train_pool,
+    params = cv_params,
+    fold_count = 5,
+    type = "TimeSeries",
+    shuffle = FALSE,
+    stratified = FALSE,
+    partition_random_seed = 42,
+    early_stopping_rounds = 50
+  )
+  
+  # Add Iteration column if not present
+  if (!"Iteration" %in% names(cv)) {
+    cv$Iteration <- seq_len(nrow(cv))
+  }
+  
+  best_iter <- which.min(cv$test.RMSE.mean)
+  best_rmse <- min(cv$test.RMSE.mean)
+  test_rmse <- cv$test.RMSE.mean[best_iter]
+  train_rmse <- cv$train.RMSE.mean[best_iter]
+  rmse_gap_ratio <- (test_rmse - train_rmse) / train_rmse
+  
+  flag <- if (rmse_gap_ratio > 0.2) {
+    "OVERFITTING"
+  } else if (rmse_gap_ratio < 0.01 && test_rmse > 2 && train_rmse > 2) {
+    "UNDERFITTING"
+  } else {
+    "OK"
+  }
+  
+  results <- rbind(results, data.frame(
+    depth = p$depth,
+    learning_rate = p$learning_rate,
+    l2_leaf_reg = p$l2_leaf_reg,
+    rsm = p$rsm,
+    best_iter = best_iter,
+    best_rmse = best_rmse,
+    train_rmse = train_rmse,
+    test_rmse = test_rmse,
+    rmse_gap_ratio = rmse_gap_ratio,
+    flag = overfit_flag
+  ))
+}
 
-head(catboost_cv)
+results <- filter(results, flag == "OK")
 
+results_sorted_1000_iterarions <- arrange(results, best_rmse)
+kable(head(results_sorted_1000_iterarions, 10), caption = "Top 10 Parameter Sets by Best RMSE (No Overfitting)")
 best_iter <- which.min(catboost_cv$test.RMSE.mean)
 best_rmse <- min(catboost_cv$test.RMSE.mean)
 
 
 catboost_cv$Iteration <- seq_len(nrow(catboost_cv))
-
-library(ggplot2)
-
-rmse_4000 <- ggplot(catboost_cv, aes(x = Iteration)) +
-  geom_line(aes(y = test.RMSE.mean), color = "blue", linewidth = 1) +
-  geom_line(aes(y = train.RMSE.mean), color = "darkgreen", linetype = "dashed") +
-  geom_vline(xintercept = best_iter, color = "red", linetype = "dotted") +
-  annotate("text",
-           x = best_iter,
-           y = best_rmse,
-           label = paste("Best Iter:", best_iter),
-           hjust = -0.1, vjust = -1, color = "red", size = 3.5) +
-  labs(
-    title = "Cross-validated RMSE vs Iteration",
-    subtitle = "Blue = Validation RMSE | Dashed Green = Training RMSE",
-    x = "Iteration",
-    y = "RMSE"
-  ) +
-  theme_minimal()
 
 
 # Get final training and test RMSE from the best iteration
@@ -160,19 +192,6 @@ cat("Best Iteration:", catboost_cv$Iteration[best_iter], "\n")
 cat("Test RMSE:", round(test_rmse, 4), "\n")
 cat("Train RMSE:", round(train_rmse, 4), "\n")
 cat("RMSE Gap Ratio:", round(rmse_gap_ratio * 100, 2), "%\n")
-
-# Interpret the gap
-if (rmse_gap_ratio > 0.2) {
-  cat("Likely overfitting: test RMSE is significantly higher than train RMSE.\n")
-} else if (rmse_gap_ratio < 0.05) {
-  if (test_rmse > 2 && train_rmse > 2) {
-    cat("Likely underfitting: both RMSEs are high and close together.\n")
-  } else {
-    cat("Model is well balanced with minimal gap.\n")
-  }
-} else {
-  cat("Acceptable gap between test and train RMSE — likely well-generalized.\n")
-}
 
 
 

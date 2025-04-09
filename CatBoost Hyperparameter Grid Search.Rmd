@@ -63,14 +63,7 @@ train_pool <- catboost.load_pool(data = x_train, label = y_train)
 test_pool <- catboost.load_pool(data = x_test, label = y_test)
 ```
 
-```{r}
-# Assume data is already split and train_pool is prepared
-data_loaded <- exists("train_pool")
-if (!data_loaded) stop("Please define train_pool before running this grid search.")
-```
-
 ## Define Hyperparameter Grid
-
 ```{r}
 depths <- c(4, 6, 8)
 learning_rates <- c(0.01, 0.02, 0.05)
@@ -88,14 +81,14 @@ results <- data.frame()
 ```
 
 ## Run Grid Search with Cross-Validation
-
+## Iterations = 1000, base hyperparameter grid 
 ```{r, message=TRUE}
 for (i in 1:nrow(param_grid)) {
   p <- param_grid[i, ]
   
   cv_params <- list(
     loss_function = "RMSE",
-    iterations = 5000,
+    iterations = 1000,
     depth = p$depth,
     learning_rate = p$learning_rate,
     l2_leaf_reg = p$l2_leaf_reg,
@@ -114,44 +107,53 @@ for (i in 1:nrow(param_grid)) {
     partition_random_seed = 42,
     early_stopping_rounds = 50
   )
-  
+
+  # Add Iteration column if not present
+  if (!"Iteration" %in% names(cv)) {
+    cv$Iteration <- seq_len(nrow(cv))
+  }
+
   best_iter <- which.min(cv$test.RMSE.mean)
   best_rmse <- min(cv$test.RMSE.mean)
-  
+  test_rmse <- cv$test.RMSE.mean[best_iter]
+  train_rmse <- cv$train.RMSE.mean[best_iter]
+  rmse_gap_ratio <- (test_rmse - train_rmse) / train_rmse
+
+  flag <- if (rmse_gap_ratio > 0.2) {
+    "OVERFITTING"
+  } else if (rmse_gap_ratio < 0.01 && test_rmse > 2 && train_rmse > 2) {
+    "UNDERFITTING"
+  } else {
+    "OK"
+  }
+
   results <- rbind(results, data.frame(
     depth = p$depth,
     learning_rate = p$learning_rate,
     l2_leaf_reg = p$l2_leaf_reg,
     rsm = p$rsm,
     best_iter = best_iter,
-    best_rmse = best_rmse
+    best_rmse = best_rmse,
+    train_rmse = train_rmse,
+    test_rmse = test_rmse,
+    rmse_gap_ratio = rmse_gap_ratio,
+    flag = overfit_flag
   ))
 }
 ```
 
-## Display and Save Results
-
+#remove the iterations that are overfitting before you proceed 
 ```{r}
-results_sorted <- arrange(results, best_rmse)
-print(head(results_sorted, 10))
+results <- filter(results, flag == "OK")
 
-# Optionally save
-# write.csv(results_sorted, "catboost_grid_results.csv", row.names = FALSE)
+results_sorted_1000_iterarions <- arrange(results, best_rmse)
+kable(head(results_sorted_1000_iterarions, 10), caption = "Top 10 Parameter Sets by Best RMSE (No Overfitting)")
 ```
 
-## Plot RMSE Across Learning Rate and Depth
-
 ```{r}
-ggplot(results, aes(x = learning_rate, y = best_rmse, color = as.factor(depth))) +
-  geom_point(size = 3, alpha = 0.7) +
-  facet_wrap(~ l2_leaf_reg, labeller = label_both) +
-  labs(
-    title = "Validation RMSE by Learning Rate, Depth, and L2 Regularization",
-    x = "Learning Rate",
-    y = "Best Test RMSE",
-    color = "Depth"
-  ) +
-  theme_minimal()
+# write.csv(results_sorted_1000_iterarions, "Model Outputs/ hyperparameter_grid_1000.csv", row.names = FALSE)
 ```
+
+
 
 
